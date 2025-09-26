@@ -94,8 +94,8 @@ def create_timelapse_video(input_folder: str, output_video: str, fps: int = 10, 
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(description='创建人脸延时视频')
-    parser.add_argument('--input', '-i', default='Everyday_align',
-                       help='输入文件夹路径 (默认: Everyday_align)')
+    parser.add_argument('--input', '-i', default='Everyday_align_dlib',
+                       help='输入文件夹路径 (默认: Everyday_align_dlib)')
     parser.add_argument('--output', '-o', default='timelapse.mp4',
                        help='输出视频文件名 (默认: timelapse.mp4)')
     parser.add_argument('--fps', type=int, default=10,
