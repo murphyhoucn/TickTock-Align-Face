@@ -41,12 +41,26 @@ python create_video.py
 ``` bash
 opencv-contrib-python                     4.11.0.86
 opencv-python                             4.11.0.86
-dlib                                      19.22.99
+dlib                                      19.24.0  # ⚠️ 必须从conda-forge安装
 imutils                                   0.5.4
-numpy                                     1.23.5
+numpy                                     1.26.4
 pathlib                                   1.0.1
 pathlib2                                  2.3.7.post1
 ```
+
+### ⚠️ 重要：dlib安装说明
+
+**Windows用户必看**：pip安装的dlib有BUG，必须使用conda：
+
+```bash
+# 正确的安装方式（推荐）
+conda install -c conda-forge dlib -y
+
+# ❌ 错误方式（会安装损坏的19.22.99版本）
+# pip install dlib
+```
+
+详见：[TROUBLESHOOTING.md](TROUBLESHOOTING.md) 查看完整的问题排查指南
 
 
 ### 方法一：智能安装（推荐）
@@ -67,6 +81,15 @@ pip install -r requirements-minimal.txt
 
 **完整版本（包含dlib，最高精度）**：
 ```bash
+# ⚠️ Windows用户必须先用conda安装dlib
+conda install -c conda-forge dlib -y
+
+# 然后安装其他依赖
+pip install opencv-python imutils
+```
+
+**Linux/Mac用户**：
+```bash
 pip install -r requirements.txt
 ```
 
@@ -75,15 +98,17 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-### 方法三：使用预编译dlib
+### 方法三：Windows用户专用（推荐）
 
-如果dlib标准安装失败：
 ```bash
-# 安装基础依赖
-pip install -r requirements-minimal.txt
+# 第一步：安装dlib（必须！）
+conda install -c conda-forge dlib -y
 
-# 使用预编译dlib
-pip install dlib-19.22.99-cp310-cp310-win_amd64.whl
+# 第二步：安装其他依赖
+pip install opencv-python imutils
+
+# 第三步：验证安装
+python -c "import dlib; print('dlib版本:', dlib.__version__)"
 ```
 
 ### 验证安装

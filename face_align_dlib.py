@@ -61,17 +61,44 @@ class FaceAligner:
             检测到的人脸区域列表
         """
         # 转换为灰度图
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
         
-        # 确保图像格式正确
+        # 确保图像格式正确 - dlib需要连续的内存布局
         if gray.dtype != np.uint8:
             gray = gray.astype(np.uint8)
         
-        # 使用dlib检测人脸
-        faces = self.detector(gray)
-        logger.debug(f"dlib检测到 {len(faces)} 个人脸")
+        # 确保内存是连续的
+        if not gray.flags['C_CONTIGUOUS']:
+            gray = np.ascontiguousarray(gray)
         
-        return faces
+        # 确保数组是可写的
+        if not gray.flags['WRITEABLE']:
+            gray = gray.copy()
+        
+        # 使用dlib检测人脸
+        try:
+            faces = self.detector(gray, 1)  # 添加upsampling参数
+            logger.debug(f"dlib检测到 {len(faces)} 个人脸")
+            return faces
+        except RuntimeError as e:
+            logger.error(f"dlib检测人脸时出错: {e}")
+            logger.info("尝试使用RGB图像...")
+            # 尝试使用RGB图像
+            try:
+                if len(image.shape) == 3:
+                    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    rgb = np.ascontiguousarray(rgb)
+                    faces = self.detector(rgb, 1)
+                    logger.debug(f"使用RGB图像，dlib检测到 {len(faces)} 个人脸")
+                    return faces
+                else:
+                    return []
+            except Exception as e2:
+                logger.error(f"RGB图像检测也失败: {e2}")
+                return []
     
     def get_landmarks(self, image: np.ndarray, face_rect: dlib.rectangle) -> np.ndarray:
         """
@@ -83,14 +110,36 @@ class FaceAligner:
             68个关键点坐标 (68, 2)
         """
         # 转换为灰度图
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
         
-        # 确保图像格式正确
+        # 确保图像格式正确 - dlib需要连续的内存布局
         if gray.dtype != np.uint8:
             gray = gray.astype(np.uint8)
         
+        # 确保内存是连续的
+        if not gray.flags['C_CONTIGUOUS']:
+            gray = np.ascontiguousarray(gray)
+        
+        # 确保数组是可写的
+        if not gray.flags['WRITEABLE']:
+            gray = gray.copy()
+        
         # 获取关键点
-        landmarks = self.predictor(gray, face_rect)
+        try:
+            landmarks = self.predictor(gray, face_rect)
+        except RuntimeError as e:
+            logger.error(f"dlib获取关键点时出错: {e}")
+            logger.info("尝试使用RGB图像...")
+            # 尝试使用RGB图像
+            if len(image.shape) == 3:
+                rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                rgb = np.ascontiguousarray(rgb)
+                landmarks = self.predictor(rgb, face_rect)
+            else:
+                raise
         
         # 转换为numpy数组
         coords = np.zeros((68, 2), dtype=np.float32)
@@ -207,10 +256,7 @@ class FaceAligner:
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'}
         
         # 获取所有图片文件
-        image_files = []
-        for ext in image_extensions:
-            image_files.extend(input_path.glob(f'*{ext}'))
-            image_files.extend(input_path.glob(f'*{ext.upper()}'))
+        image_files = [p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() in image_extensions]
         
         if not image_files:
             logger.error(f"在文件夹 {input_folder} 中未找到图片文件")
